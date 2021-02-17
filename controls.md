@@ -1,4 +1,4 @@
-# Controls
+# 3D Quadcopter Controls
 
 <div class="container" style="width: 100%;">
  <div class="D1 col-sm-6" style="width: 50%;">
@@ -11,7 +11,7 @@
 
 ## Vehicle Dynamics
 
-Dynamics: motion of bodies under the action of forces.
+**Dynamics**: motion of bodies under the action of forces.
 
 Example for a drone:
 Inputs: rotation rates of the 4 propellers
@@ -22,7 +22,6 @@ Outputs: motion of the vehicle
 **Definition of Force**
 
 Forces on a Quadrotor: gravity / weight, thrusts, drag. A force is simply a push or a pull on an object. Air resistance and drag will not be modelled. Drag is treated as a disturbance.
-
 
 **Translational Equilibrium / Hover**
 
@@ -81,7 +80,8 @@ Output:trajectory
  
  angular acceleration: $\ddot \phi = \frac{M_X}{I_X}$ 
  
- with $I_X$ momemt of inertia around the X-axis
+ with $I_X$ moment of inertia around the X-axis
+
 2. $F_Z$ determines $\ddot z$ with $\ddot z = g - \frac{F_T.\cos\phi}{m}$
  
  also : $\ddot y = \frac{F_T.\sin\phi}{m}$
@@ -182,16 +182,14 @@ The linearization of the motion equations enabled to decouple the motion.
 
 ![cascading_controller](assets/cascading_controller.png)
 
-### Nonlinear 2D Control
-
 
 ### Review of 2D dynamics
 
 1. Identify state $y, z, \phi, \dot y, \dot z, \dot \phi$
 
 2. Identify Forces and Moments acting on the vehicle. Forces determined acceleration $\ddot y$ and $\ddot z$ and Moments determined angular acceleration $\ddot \phi$
-3. y, z, and $\phi$ were calculated based on $\ddot y, \ddot z, \ddot \phi$ via double integration
 
+3. y, z, and $\phi$ were calculated based on $\ddot y, \ddot z, \ddot \phi$ via double integration
 
 
 ## Full 3D Control
@@ -220,7 +218,6 @@ Correspondingly the derivative of the state vector in time will have the next fo
 |p, q, r               |Angular rotation rates about the x-axis, y-axis and z-axis |**Body**|rad/s    |
 
 The World frame is also called the inertial coordinate system.
-
 
 
 ### Identify Forces and Moments acting on the vehicle (in body frame).
@@ -283,10 +280,8 @@ The controllers will have the following inputs / outputs:
 
 A first order system outputs the 1st derivative of its input, like the yaw controller (input $\psi$, output is a function of $\dot \psi$). A P controller is enough for a 1st order system.
 
-
 A 2nd order system outputs the 2nd derivative of its input, like the altitude controller (input z, output $\ddot z$)
 In order to control a 2nd order system, a PD controller is necessary. PID can be useful but can also be ignored.
-
 
 The controller communicates the following values: $c$; $\bar u_p$; $\bar u_q$; $\bar u_r$.
 
@@ -310,7 +305,6 @@ $$
 \begin{pmatrix} 1 & 1 & 1 & 1 \\ 1 & -1 & -1 & 1 \\ 1 & 1 & -1 & -1\\ 1 & -1 & 1 & -1 \end{pmatrix} \times \begin{pmatrix} \omega^2_1 \\ \omega^2_2 \\ \omega^2_3\\ \omega^2_4 \end{pmatrix} = \begin{pmatrix} \bar{c} \\ \bar{p} \\ \bar{q} \\ \bar{r} \end{pmatrix}
 $$
 
-
 We need to transform the inputs from the controller into the $\bar{c}$, $\bar{p}$, $\bar{q}$, $\bar{r}$ variables.
 
 The $c$ value received from the controller is equal to $\frac{F}{m} = c$, For equation $(\omega^2_1 + \omega^2_2 + \omega^2_3 + \omega^2_4) = \bar{c}$ the proper transformation will be $\bar{c} = \frac{F}{k_f} = \frac{c m }{k_f}$ (which transforms thrust in dimensionless form).
@@ -325,7 +319,6 @@ $$
 $$
 
 #### Transformation
-
 
 Rotation matrix to transform coordinates from the body frame to the world frame
 
@@ -394,10 +387,6 @@ A good approach is to follow this sequence:
 3. Altitude controller
 4. Lateral controller
 5. Yaw controller
-
-
-### From Path Planning to Control
-
 
 
 

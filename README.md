@@ -150,11 +150,12 @@ With the proper mass, your simulation should look a little like this:
 
 ## The Tasks ##
 
-For this project, you will be building a controller in C++.  You will be implementing and tuning this controller in several steps.
+For this project, we will be building a controller in C++.  We will be implementing and tuning this controller in several steps.
 
 You may find it helpful to consult the [Python controller code](https://github.com/udacity/FCND-Controls/blob/solution/controller.py) as a reference when you build out this controller in C++.
 
 #### Notes on Parameter Tuning
+
 1. **Comparison to Python**: Note that the vehicle you'll be controlling in this portion of the project has different parameters than the vehicle that's controlled by the Python code linked to above. **The tuning parameters that work for the Python controller will not work for this controller**
 
 2. **Parameter Ranges**: You can find the vehicle's control parameters in a file called `QuadControlParams.txt`. The default values for these parameters are all too small by a factor of somewhere between about 2X and 4X. So if a parameter has a starting value of 12, it will likely have a value somewhere between 24 and 48 once it's properly tuned.
@@ -171,7 +172,7 @@ First, we implement the body rate and roll / pitch control.  For the simulation,
 
 To accomplish this, we will:
 
-1. Implement body rate control
+1. **Implement body rate control**
 
  - implement the code in the function `GenerateMotorCommands()`
 
@@ -196,7 +197,7 @@ If successful, you should see the rotation of the vehicle about roll (omega.x) g
 
 If you come back to this step after the next step, you can try tuning just the body rate omega (without the outside angle controller) by setting `QuadControlParams.kpBank = 0`.
 
-2. Implement roll / pitch control
+2. **Implement roll / pitch control**
 We won't be worrying about yaw just yet.
 
  - implement the code in the function `RollPitchControl()`
@@ -235,14 +236,14 @@ Next, we will implement the position, altitude and yaw control for the quad.  Fo
  - implement the code in the function `LateralPositionControl()`
 
  We will use a simple PD controller and set the horizontal acceleration as a function of the difference in position and velocity.
- 
+Note that both the desired velocity and the calculated acceleration are bounded by `maxSpeedXY` and `maxAccelXY`
  
  - implement the code in the function `AltitudeControl()`
 
  Here, we will use a PID controller to define the desired thrust. We define $\bar U_z$ as a function of the difference in altitude, vertical velocity and current vertical acceleration. Then, we scale $\bar U_z$ depending on the pose of the drone ($R_{33}$)
+Note that the absolute value of vertical acceleration ($\ddot z$) is bounded by `maxAscentRate / dt`
  
- - tune parameters `kpPosZ` and `kpPosZ`
- - tune parameters `kpVelXY` and `kpVelZ`
+Then, we tune parameters `kpPosZ`, `kpPosZ`, `kpVelXY` and `kpVelZ` (see parameters value below)
 
 If successful, the quads should be going to their destination points and tracking error should be going down (as shown below). However, one quad remains rotated in yaw.
 
