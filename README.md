@@ -129,9 +129,6 @@ There are a handful of keyboard / mouse commands to help with the simulator itse
  - R - reset simulation
  - Space - pause simulation
 
-
-
-
 ### Testing it Out ###
 
 When you run the simulator, you'll notice your quad is falling straight down.  This is due to the fact that the thrusts are simply being set to:
@@ -164,17 +161,36 @@ You may find it helpful to consult the [Python controller code](https://github.c
 
 3. **Parameter Ratios**: In this [one-page document](https://www.overleaf.com/read/bgrkghpggnyc#/61023787/) you can find a derivation of the ratio of velocity proportional gain to position proportional gain for a critically damped double integrator system. The ratio of `kpV / kpP` should be 4.
 
-### Body rate and roll/pitch control (scenario 2) ###
+### Set the correct mass (Scenario 1)
 
-First, you will implement the body rate and roll / pitch control.  For the simulation, you will use `Scenario 2`.  In this scenario, you will see a quad above the origin.  It is created with a small initial rotation speed about its roll axis.  Your controller will need to stabilize the rotational motion and bring the vehicle back to level attitude.
+I adjusted the mass of the drone to 0.5 so that it hovers when the total thrust of the propellers is equal to the force of gravity (F = mg or mg/4 for each of the 4 propellers)
 
-To accomplish this, you will:
+### Body rate and roll/pitch control (scenario 2)
+
+First, we implement the body rate and roll / pitch control.  For the simulation, we will use `Scenario 2`.  In this scenario, we will see a quad above the origin.  It is created with a small initial rotation speed about its roll axis.  The controller will need to stabilize the rotational motion and bring the vehicle back to level attitude.
+
+To accomplish this, we will:
 
 1. Implement body rate control
 
  - implement the code in the function `GenerateMotorCommands()`
+
+ Here, the problem is: given the total thrust $F_T$ and the moments $M_x$, $M_y$, $M_z$, we need to calculate the thrust to apply to each propeller ($F_1, F_2, F_3, F_4$). We have 4 equations with 4 unknown variables:
+ 
+* $F_T = F_1 + F_2 + F_3 + F_4$
+* $Mx = (F1 + F4 - F2 - F3).l$
+* $My = (F1 + F2 - F3 - F4).l$
+* $Mz = -(F1 - F2 + F3 - F4).kappa$
+
+We easily solve for $F_1, F_2, F_3, F_4$ by adding and/or substracting each equation.
+ 
  - implement the code in the function `BodyRateControl()`
+
+Here, we will calculate a desired 3-axis moment given a desired and current body rate.
+We use a proportional controller to adjust the angular rotation rates p, q, and r and then multiply by the moment of inertia Ixx, Iyy, Izz (as a reminder, $M = I.\alpha$)
+ 
  - Tune `kpPQR` in `QuadControlParams.txt` to get the vehicle to stop spinning quickly but not overshoot
+ `KpPQR` was set at around 90, 90, 6
 
 If successful, you should see the rotation of the vehicle about roll (omega.x) get controlled to 0 while other rates remain zero.  Note that the vehicle will keep flying off quite quickly, since the angle is not yet being controlled back to 0.  Also note that some overshoot will happen due to motor dynamics!.
 
@@ -184,7 +200,26 @@ If you come back to this step after the next step, you can try tuning just the b
 We won't be worrying about yaw just yet.
 
  - implement the code in the function `RollPitchControl()`
+Here, we will calculate a desired pitch and roll angle rates `pqrCmd` based on a desired global lateral acceleration `accelCmd`, the current attitude of the quad `attitude` in quaternions, and desired collective thrust command `collThrustCmd`
+ 
+1. We first define $b^x$ and $b^y$ as the rotation matrix elements $R_{13}$ and $R_{23}$ - note that we access these elements by calling respectively R(0,2) and R(1,2)
+
+Target $b^x_c = \ddot x / c$ with $c = \frac{F_T}{mass}$
+Target $b^y_c = \ddot y / c$ with $c = \frac{F_T}{mass}$
+
+Actual $b^x_a = R_{13}$
+Actual $b^y_a = R_{23}$
+
+
+2. Then, we use a P controller (with KpBank as the proportional factor to tune) to determine the desired rate of change of the rotation matrix elements, called $\dot b^x_c$ and $\dot b^y_c$
+
+3. Finally, we calculate $p_c$ and $q_c$, the angular velocities in the body frame, by applying a matrix multiplication (see formula in code)
+ 
+We will leave the yaw rate at 0.
+ 
  - Tune `kpBank` in `QuadControlParams.txt` to minimize settling time but avoid too much overshoot
+
+`kpBank = 10` achieves the desired outcome
 
 If successful you should now see the quad level itself (as shown below), though it’ll still be flying away slowly since we’re not controlling velocity/position!  You should also see the vehicle angle (Roll) get controlled to 0.
 
@@ -195,16 +230,26 @@ If successful you should now see the quad level itself (as shown below), though 
 
 ### Position/velocity and yaw angle control (scenario 3) ###
 
-Next, you will implement the position, altitude and yaw control for your quad.  For the simulation, you will use `Scenario 3`.  This will create 2 identical quads, one offset from its target point (but initialized with yaw = 0) and second offset from target point but yaw = 45 degrees.
+Next, we will implement the position, altitude and yaw control for the quad.  For the simulation, we will use `Scenario 3`.  This will create 2 identical quads, one offset from its target point (but initialized with yaw = 0) and second offset from target point but yaw = 45 degrees.
 
  - implement the code in the function `LateralPositionControl()`
+
+ We will use a simple PD controller and set the horizontal acceleration as a function of the difference in position and velocity.
+ 
+ 
  - implement the code in the function `AltitudeControl()`
+
+ Here, we will use a PID controller to define the desired thrust. We define $\bar U_z$ as a function of the difference in altitude, vertical velocity and current vertical acceleration. Then, we scale $\bar U_z$ depending on the pose of the drone ($R_{33}$)
+ 
  - tune parameters `kpPosZ` and `kpPosZ`
  - tune parameters `kpVelXY` and `kpVelZ`
 
 If successful, the quads should be going to their destination points and tracking error should be going down (as shown below). However, one quad remains rotated in yaw.
 
  - implement the code in the function `YawControl()`
+
+ We will use a proportional controller (1st order controller). The main challenge here is to ensure that both the desired yaw angle and the angle error (target - actual) are within a normal range.
+ 
  - tune parameters `kpYaw` and the 3rd (z) component of `kpPQR`
 
 Tune position control for settling time. Don’t try to tune yaw control too tightly, as yaw control requires a lot of control authority from a quadcopter and can really affect other degrees of freedom.  This is why you often see quadcopters with tilted motors, better yaw authority!
@@ -233,13 +278,36 @@ In this part, we will explore some of the non-idealities and robustness of a con
 </p>
 
 
-### Tracking trajectories ###
+### Tracking trajectories (scenario 5) ###
 
 Now that we have all the working parts of a controller, you will put it all together and test it's performance once again on a trajectory.  For this simulation, you will use `Scenario 5`.  This scenario has two quadcopters:
  - the orange one is following `traj/FigureEight.txt`
  - the other one is following `traj/FigureEightFF.txt` - for now this is the same trajectory.  For those interested in seeing how you might be able to improve the performance of your drone by adjusting how the trajectory is defined, check out **Extra Challenge 1** below!
 
 How well is your drone able to follow the trajectory?  It is able to hold to the path fairly well?
+
+
+### Final Parameters
+
+|**Control gains**|Values|
+|---              |---   |
+|Position         |      |
+|kpPosXY          |30    |
+|kpPosZ           |20    |
+|KiPosZ           |40    |
+|                 |      |
+|**Velocity**     |      |
+|kpVelXY          |13    |
+|kpVelZ           |9     |
+|                 |      |
+|**Angle**        |      |
+|kpBank           |10    |
+|kpYaw            |2     |
+|                 |      |
+|**Angle rate**   |      |
+|kpPQR|90, 90, 6  |      |
+
+
 
 
 ### Extra Challenge 1 (Optional) ###
